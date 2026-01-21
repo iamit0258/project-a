@@ -25,20 +25,34 @@ function getSupabaseClient() {
 // Verify JWT and get user ID
 async function getUserIdFromToken(authHeader: string | undefined): Promise<string | null> {
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        console.log("No auth header or not Bearer token");
         return null;
     }
 
     const token = authHeader.substring(7);
+    console.log("Token received, length:", token.length);
+
     const supabase = getSupabaseClient();
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    try {
+        const { data: { user }, error } = await supabase.auth.getUser(token);
 
-    if (error || !user) {
-        console.error("Auth error:", error);
+        if (error) {
+            console.error("Supabase auth error:", error.message);
+            return null;
+        }
+
+        if (!user) {
+            console.log("No user returned from token verification");
+            return null;
+        }
+
+        console.log("User authenticated:", user.id);
+        return user.id;
+    } catch (err: any) {
+        console.error("Token verification exception:", err.message);
         return null;
     }
-
-    return user.id;
 }
 
 // ===== STORAGE CLASS =====
@@ -130,10 +144,17 @@ app.get("/api/messages", async (req, res) => {
 // POST /api/messages
 app.post("/api/messages", async (req, res) => {
     try {
+        console.log("POST /api/messages - Authorization header present:", !!req.headers.authorization);
+
         const userId = await getUserIdFromToken(req.headers.authorization);
+        console.log("User ID from token:", userId);
 
         if (!userId) {
-            return res.status(401).json({ message: "Unauthorized: Please sign in" });
+            console.log("Auth failed - returning 401");
+            return res.status(401).json({
+                message: "Unauthorized: Please sign in",
+                detail: "Could not verify authentication token. Make sure you are logged in."
+            });
         }
 
         const inputSchema = z.object({ content: z.string().min(1) });
