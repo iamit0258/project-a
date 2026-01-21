@@ -58,18 +58,14 @@ export function useSendMessage() {
   });
 }
 
-// POST /api/messages/clear
+// Clear messages (frontend only - keeps messages in database)
 export function useClearMessages() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const authHeaders = await getAuthHeaders();
-      const res = await fetch(api.messages.clear.path, {
-        method: "POST",
-        headers: authHeaders,
-      });
-      if (!res.ok) throw new Error("Failed to clear messages");
-      return;
+      // Only clear frontend cache, don't delete from database
+      // This allows users to "start fresh" without losing history
+      return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.setQueryData([api.messages.list.path], []);

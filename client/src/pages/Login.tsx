@@ -10,6 +10,7 @@ export default function Login() {
     const { signInWithEmail, signUpWithEmail, loading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [name, setName] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
@@ -20,7 +21,16 @@ export default function Login() {
 
         try {
             if (isSignUp) {
-                await signUpWithEmail(email, password);
+                if (!name.trim()) {
+                    toast({
+                        variant: "destructive",
+                        title: "Name required",
+                        description: "Please enter your name to sign up.",
+                    });
+                    setIsSubmitting(false);
+                    return;
+                }
+                await signUpWithEmail(email, password, name.trim());
                 toast({
                     title: "Check your email",
                     description: "We've sent you a confirmation link to complete sign up.",
@@ -59,6 +69,19 @@ export default function Login() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <form onSubmit={handleSubmit} className="space-y-4">
+                        {isSignUp && (
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input
+                                    id="name"
+                                    type="text"
+                                    placeholder="Your full name"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    required={isSignUp}
+                                />
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>
                             <Input
