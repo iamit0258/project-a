@@ -7,13 +7,21 @@ import { z } from "zod";
 import Groq from "groq-sdk";
 
 // Initialize Groq client
-if (!process.env.GROQ_API_KEY) {
-  console.warn("GROQ_API_KEY is not set. Chat functionality will fail.");
-}
+// Initialize Groq client lazily
+let groqInstance: Groq | null = null;
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY || "missing_key",
-});
+function getGroqClient() {
+  if (!groqInstance) {
+    const apiKey = process.env.GROQ_API_KEY || "missing_key";
+    if (apiKey === "missing_key") {
+      console.warn("GROQ_API_KEY is not set. Chat functionality will fail.");
+    }
+    groqInstance = new Groq({
+      apiKey,
+    });
+  }
+  return groqInstance;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -48,7 +56,7 @@ export async function registerRoutes(
         content: msg.content
       }));
 
-      const completion = await groq.chat.completions.create({
+      const completion = await getGroqClient().chat.completions.create({
         messages: [
           {
             role: "system",
@@ -70,17 +78,14 @@ export async function registerRoutes(
       res.status(201).json(aiMessage);
     } catch (err: any) {
       const isGroqError = err.message?.toLowerCase().includes("groq") || err.message?.toLowerCase().includes("api key") || err.message?.toLowerCase().includes("authentication");
-      const isDbError = err.message?.toLowerCase().includes("database") || err.message?.toLowerCase().includes("postgres") || err.message?.toLowerCase().includes("relation");
 
       let userMessage = "Failed to process chat message";
       if (isGroqError) userMessage = "AI Error: Please verify your GROQ_API_KEY in Vercel settings.";
-      if (isDbError) userMessage = "Database Error: Please verify your DATABASE_URL in Vercel settings.";
 
       console.error("Chat Error Detail:", {
         message: err.message,
         stack: err.stack,
-        isGroqError,
-        isDbError
+        isGroqError
       });
       res.status(500).json({
         message: userMessage,
@@ -107,6 +112,35 @@ export async function registerRoutes(
     console.error("Failed to seed data:", seedError.message);
     // Continue anyway so the server can at least start and provide more diagnostics
   }
+
+  // Voice Assistant Route
+  app.post("/api/voice/start", (req, res) => {
+    const { spawn } = require("child_process");
+
+    // Check if running already? For simplicity, we just launch it.
+    // Ideally we might track pids, but for local use this is fine.
+
+    // We use 'npm run voice' or 'python' directly. 
+    // Using 'cmd /c start' on Windows to open in a new window so user can interact/see status 
+    const isWindows = process.platform === "win32";
+    const command = isWindows ? "cmd" : "python";
+    const args = isWindows
+      ? ["/c", "start", "python", "python_assistant/assistant.py"]
+      : ["python_assistant/assistant.py"];
+
+    try {
+      const subprocess = spawn(command, args, {
+        detached: true,
+        stdio: 'ignore'
+      });
+      subprocess.unref(); // Allow server to keep running independently
+
+      res.status(200).json({ message: "Voice assistant started" });
+    } catch (e: any) {
+      console.error("Voice Launch Error:", e);
+      res.status(500).json({ message: "Failed to launch voice assistant", error: e.message });
+    }
+  });
 
   return httpServer;
 }

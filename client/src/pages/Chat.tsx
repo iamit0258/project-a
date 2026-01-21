@@ -3,7 +3,7 @@ import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { useMessages, useSendMessage, useClearMessages } from "@/hooks/use-messages";
-import { Moon, Sun, Trash2, MessageSquareText, Menu } from "lucide-react";
+import { Moon, Sun, Trash2, MessageSquareText, Menu, Mic } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,10 +46,7 @@ export default function Chat() {
     if (confirm("Are you sure you want to clear the conversation?")) {
       clearMessages(undefined, {
         onSuccess: () => {
-          toast({
-            title: "Chat cleared",
-            description: "Conversation history has been reset.",
-          });
+          // No toast notified as requested
         },
       });
     }
@@ -111,11 +108,11 @@ export default function Chat() {
             </div>
           ) : (
             <>
-              {messages?.map((msg, idx) => (
+              {messages?.map((msg, idx: number) => (
                 <MessageBubble
                   key={msg.id}
                   message={msg}
-                  isLast={idx === messages.length - 1}
+                  isLast={idx === (messages?.length ?? 0) - 1}
                 />
               ))}
               {isSending && <TypingIndicator />}
@@ -131,6 +128,23 @@ export default function Chat() {
 
 function Header({ onClear, isClearing, hasMessages }: { onClear: () => void, isClearing: boolean, hasMessages: boolean }) {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
+
+  const handleStartVoice = async () => {
+    try {
+      await fetch("/api/voice/start", { method: "POST" });
+      toast({
+        title: "Voice Assistant Started",
+        description: "Check the new terminal window that opened.",
+      });
+    } catch (e) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to start voice assistant",
+      });
+    }
+  };
 
   return (
     <header className="flex items-center justify-between px-4 md:px-6 py-4 bg-background/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50">
@@ -191,7 +205,19 @@ function Header({ onClear, isClearing, hasMessages }: { onClear: () => void, isC
         </div>
       </div>
 
+
+
       <div className="flex items-center gap-2">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleStartVoice}
+          className="hidden md:flex bg-primary/90 hover:bg-primary shadow-sm gap-2"
+        >
+          <Mic className="w-4 h-4" />
+          Voice Mode
+        </Button>
+
         <div className="hidden md:flex items-center bg-muted/50 rounded-full p-1 border border-border/50">
           <Button
             variant="ghost"
@@ -226,6 +252,6 @@ function Header({ onClear, isClearing, hasMessages }: { onClear: () => void, isC
           </Button>
         </div>
       </div>
-    </header>
+    </header >
   );
 }

@@ -1,6 +1,5 @@
-
 import { z } from "zod";
-import { insertMessageSchema, messages } from "./schema";
+import { insertMessageSchema, messageSchema, type Message } from "./schema";
 
 export const api = {
   messages: {
@@ -8,7 +7,7 @@ export const api = {
       method: "GET" as const,
       path: "/api/messages",
       responses: {
-        200: z.array(z.custom<typeof messages.$inferSelect>()),
+        200: z.array(messageSchema),
       },
     },
     create: {
@@ -18,7 +17,7 @@ export const api = {
         content: z.string().min(1),
       }),
       responses: {
-        201: z.custom<typeof messages.$inferSelect>(), // Returns the AI response
+        201: messageSchema, // Returns the AI response
         500: z.object({ message: z.string() }),
       },
     },
@@ -31,6 +30,8 @@ export const api = {
     }
   },
 };
+
+export type { Message };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
   let url = path;

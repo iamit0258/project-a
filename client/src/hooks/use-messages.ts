@@ -46,15 +46,14 @@ export function useSendMessage() {
   });
 }
 
-// POST /api/messages/clear
+// POST /api/messages/clear (UI-only)
 export function useClearMessages() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch(api.messages.clear.path, {
-        method: api.messages.clear.method,
-      });
-      if (!res.ok) throw new Error("Failed to clear chat");
+      // Modified: Only clear UI, keep messages in server storage
+      // We skip the fetch(api.messages.clear.path) call
+      return Promise.resolve();
     },
     onSuccess: () => {
       queryClient.setQueryData([api.messages.list.path], []);

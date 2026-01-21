@@ -1,19 +1,17 @@
 
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const messages = pgTable("messages", {
-  id: serial("id").primaryKey(),
-  role: text("role").notNull(),
-  content: text("content").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+export const messageSchema = z.object({
+  id: z.number(),
+  role: z.enum(["user", "assistant"]),
+  content: z.string(),
+  createdAt: z.coerce.date().optional(),
 });
 
-export const insertMessageSchema = createInsertSchema(messages).pick({
+export const insertMessageSchema = messageSchema.pick({
   role: true,
   content: true,
 });
 
-export type Message = typeof messages.$inferSelect;
+export type Message = z.infer<typeof messageSchema>;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;

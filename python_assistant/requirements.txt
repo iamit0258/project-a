@@ -1,0 +1,8 @@
+groq
+SpeechRecognition
+pyaudio
+edge-tts
+python-dotenv
+pygame
+colorama
+elevenlabs
