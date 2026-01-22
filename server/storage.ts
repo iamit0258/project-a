@@ -26,6 +26,7 @@ export class SupabaseStorage implements IStorage {
     let query = this.supabase
       .from("messages")
       .select("*")
+      .neq("is_archived", true) // Filter out archived messages
       .order("created_at", { ascending: true });
 
     if (userId) {
@@ -46,6 +47,7 @@ export class SupabaseStorage implements IStorage {
       content: msg.content,
       userId: msg.user_id,
       createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
+      isArchived: msg.is_archived
     }));
   }
 
@@ -55,7 +57,8 @@ export class SupabaseStorage implements IStorage {
       .insert([{
         role: insertMessage.role,
         content: insertMessage.content,
-        user_id: insertMessage.userId // Map camel to snake for DB
+        user_id: insertMessage.userId, // Map camel to snake for DB
+        is_archived: false // Default to false
       }])
       .select()
       .single();
@@ -71,11 +74,13 @@ export class SupabaseStorage implements IStorage {
       content: data.content,
       userId: data.user_id,
       createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+      isArchived: data.is_archived
     };
   }
 
   async clearMessages(userId?: string | null): Promise<void> {
-    let query = this.supabase.from("messages").delete();
+    // Perform Soft Delete (Archive)
+    let query = this.supabase.from("messages").update({ is_archived: true });
 
     if (userId) {
       query = query.eq("user_id", userId);

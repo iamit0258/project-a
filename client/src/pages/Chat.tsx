@@ -205,10 +205,10 @@ function Header({ onClear, isClearing, hasMessages, onStartVoice }: { onClear: (
           variant="default"
           size="sm"
           onClick={onStartVoice}
-          className="hidden md:flex bg-primary/90 hover:bg-primary shadow-sm gap-2"
+          className="flex bg-primary/90 hover:bg-primary shadow-sm gap-2"
         >
           <Mic className="w-4 h-4" />
-          Voice Mode
+          <span className="hidden md:inline">Voice Mode</span>
         </Button>
 
         <div className="hidden md:flex items-center bg-muted/50 rounded-full p-1 border border-border/50">

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { signInWithEmail, signUpWithEmail, loading } = useAuth();
@@ -13,6 +14,7 @@ export default function Login() {
     const [name, setName] = useState('');
     const [isSignUp, setIsSignUp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const { toast } = useToast();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,13 +32,13 @@ export default function Login() {
                     setIsSubmitting(false);
                     return;
                 }
-                await signUpWithEmail(email, password, name.trim());
+                await signUpWithEmail(email.trim(), password, name.trim());
                 toast({
                     title: "Check your email",
                     description: "We've sent you a confirmation link to complete sign up.",
                 });
             } else {
-                await signInWithEmail(email, password);
+                await signInWithEmail(email.trim(), password);
             }
         } catch (error: any) {
             toast({
@@ -95,15 +97,29 @@ export default function Login() {
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                minLength={6}
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    required
+                                    minLength={6}
+                                    className="pr-10"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors bg-transparent border-none p-0 focus:outline-none"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="w-4 h-4" />
+                                    ) : (
+                                        <Eye className="w-4 h-4" />
+                                    )}
+                                </button>
+                            </div>
                         </div>
                         <Button
                             type="submit"
