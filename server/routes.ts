@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import Groq from "groq-sdk";
+import { spawn } from "child_process";
 
 // Initialize Groq client
 // Initialize Groq client lazily
@@ -23,6 +24,35 @@ function getGroqClient() {
   return groqInstance;
 }
 
+import { createClient } from "@supabase/supabase-js";
+
+// Helper to get Supabase client
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL || "https://xwwcanprwehvdgbztslk.supabase.co";
+  const key = process.env.SUPABASE_ANON_KEY || "";
+  return createClient(url, key);
+}
+
+// Verify JWT and get user ID
+async function getUserIdFromToken(req: any): Promise<string | null> {
+  // Check for Voice Secret (Local bypass)
+  const voiceSecret = req.headers["x-voice-secret"];
+  const voiceUserId = req.headers["x-user-id"];
+  if (voiceSecret === "project-a-voice-secret-123" && voiceUserId) {
+    return voiceUserId as string;
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authHeader.substring(7);
+  const supabase = getSupabaseClient();
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -30,7 +60,8 @@ export async function registerRoutes(
 
   app.get(api.messages.list.path, async (req, res) => {
     try {
-      const messages = await storage.getMessages();
+      const userId = await getUserIdFromToken(req);
+      const messages = await storage.getMessages(userId);
       res.json(messages);
     } catch (err: any) {
       console.error("Fetch Messages Error:", err);
@@ -40,16 +71,27 @@ export async function registerRoutes(
 
   app.post(api.messages.create.path, async (req, res) => {
     try {
-      const input = api.messages.create.input.parse(req.body);
+      // 1. Get User ID
+      const userId = await getUserIdFromToken(req);
 
-      // 1. Save User Message
+      const input = api.messages.create.input.parse(req.body);
+      const skipAi = (req.body as any).skip_ai === true;
+
+      // 2. Save User Message
       await storage.createMessage({
         role: "user",
-        content: input.content
+        content: input.content,
+        userId: userId || undefined
       });
 
-      // 2. Generate AI Response using Groq (Llama 3.3)
-      const history = await storage.getMessages();
+      // If skip_ai is true, stop here
+      if (skipAi) {
+        res.status(201).json({ role: "user", content: input.content });
+        return;
+      }
+
+      // 3. Generate AI Response using Groq (Llama 3.3)
+      const history = await storage.getMessages(userId);
 
       const messagesForGroq = history.map(msg => ({
         role: msg.role === "assistant" ? "assistant" : "user" as any,
@@ -60,7 +102,7 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: "You are Project A, a professional and soft-spoken AI assistant created by Amit Kumar, a final year B.Tech student. EXTREMELY IMPORTANT: Your name is 'Project A'. You are an intelligent, friendly, and professional AI assistant designed to deliver accurate, concise, and helpful responses across a wide range of topics. Your responsibilities include: Providing clear and reliable information using simple, easy-to-understand language. Answering questions thoughtfully and accurately based on available knowledge. Engaging in natural, context-aware conversations. Assisting users with tasks, learning, research, and problem-solving. Adapting responses based on user intent, tone, and preferences. You should prioritize correctness, clarity, and user satisfaction. When information is uncertain, acknowledge limitations honestly. Your goal is to be a trustworthy, supportive, and efficient assistant that continuously improves through interaction and feedback."
+            content: "You are Project A, a professional AI assistant. EXTREMELY IMPORTANT: Respond with ULTIMATE BREVITY. For voice mode, you MUST respond in EXACTLY ONE SHORT SENTENCE (under 15 words) whenever possible. Never use lists or long explanations. Be direct and concise. Your goal is speed and conversational efficiency."
           },
           ...messagesForGroq
         ],
@@ -69,10 +111,11 @@ export async function registerRoutes(
 
       const aiContent = completion.choices[0]?.message?.content || "I couldn't generate a response.";
 
-      // 3. Save AI Message
+      // 4. Save AI Message
       const aiMessage = await storage.createMessage({
         role: "assistant",
-        content: aiContent
+        content: aiContent,
+        userId: userId || undefined
       });
 
       res.status(201).json(aiMessage);
@@ -95,14 +138,17 @@ export async function registerRoutes(
   });
 
   app.post(api.messages.clear.path, async (req, res) => {
-    await storage.clearMessages();
+    const userId = await getUserIdFromToken(req);
+    await storage.clearMessages(userId);
     res.status(204).send();
   });
 
   // Seed data
   try {
-    const existingMessages = await storage.getMessages();
+    const existingMessages = await storage.getMessages(null);
     if (existingMessages.length === 0) {
+      // Seed is tricky with user_id... only seed for null user? 
+      // For now, only seed if NO messages at all exist
       await storage.createMessage({
         role: "assistant",
         content: "Hey there! 💫 I'm Project A, and I'm so happy to chat with you! Whether you need help with something, want to explore ideas together, or just need a friendly ear—I'm here for you. What's on your mind today?"
@@ -114,8 +160,11 @@ export async function registerRoutes(
   }
 
   // Voice Assistant Route
-  app.post("/api/voice/start", (req, res) => {
-    const { spawn } = require("child_process");
+  app.post("/api/voice/start", async (req, res) => {
+    // Get user ID
+
+    // Get user ID
+    const userId = await getUserIdFromToken(req);
 
     // Check if running already? For simplicity, we just launch it.
     // Ideally we might track pids, but for local use this is fine.
@@ -128,10 +177,17 @@ export async function registerRoutes(
       ? ["/c", "start", "python", "python_assistant/assistant.py"]
       : ["python_assistant/assistant.py"];
 
+    // Set ENV vars for the child process
+    const env = {
+      ...process.env,
+      USER_ID: userId || ""
+    };
+
     try {
       const subprocess = spawn(command, args, {
         detached: true,
-        stdio: 'ignore'
+        stdio: 'ignore',
+        env
       });
       subprocess.unref(); // Allow server to keep running independently
 
@@ -139,6 +195,63 @@ export async function registerRoutes(
     } catch (e: any) {
       console.error("Voice Launch Error:", e);
       res.status(500).json({ message: "Failed to launch voice assistant", error: e.message });
+    }
+  });
+
+  // ElevenLabs TTS Proxy
+  app.post("/api/voice/tts", async (req, res) => {
+    const { text } = req.body;
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+
+    if (!apiKey) {
+      console.error("TTS Error: ELEVENLABS_API_KEY is missing");
+      return res.status(500).json({ message: "ElevenLabs API Key not configured" });
+    }
+
+    try {
+      // Voice: Rachel (American, Expressive, Female)
+      const voiceId = "21m00Tcm4TlvDq8ikWAM";
+      const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          text,
+          model_id: "eleven_multilingual_v2", // Upgraded model for better quality
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.75
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("ElevenLabs API Error Response:", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`ElevenLabs API Error: ${response.status} ${response.statusText}`);
+      }
+
+      // Stream the audio back
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      console.log(`TTS Success: Generated ${buffer.length} bytes of audio`);
+
+      res.set({
+        "Content-Type": "audio/mpeg",
+        "Content-Length": buffer.length
+      });
+      res.send(buffer);
+
+    } catch (e: any) {
+      console.error("TTS Server-side Exception:", e);
+      res.status(500).json({ message: "TTS Generation Failed", detail: e.message });
     }
   });
 

@@ -2,9 +2,9 @@ import { type Message, type InsertMessage } from "@shared/schema";
 import { createClient } from "@supabase/supabase-js";
 
 export interface IStorage {
-  getMessages(): Promise<Message[]>;
+  getMessages(userId?: string | null): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
-  clearMessages(): Promise<void>;
+  clearMessages(userId?: string | null): Promise<void>;
 }
 
 // Supabase client
@@ -22,11 +22,17 @@ function getSupabaseClient() {
 export class SupabaseStorage implements IStorage {
   private supabase = getSupabaseClient();
 
-  async getMessages(): Promise<Message[]> {
-    const { data, error } = await this.supabase
+  async getMessages(userId?: string | null): Promise<Message[]> {
+    let query = this.supabase
       .from("messages")
       .select("*")
       .order("created_at", { ascending: true });
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Supabase getMessages error:", error);
@@ -38,6 +44,7 @@ export class SupabaseStorage implements IStorage {
       id: msg.id,
       role: msg.role,
       content: msg.content,
+      userId: msg.user_id,
       createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
     }));
   }
@@ -45,7 +52,11 @@ export class SupabaseStorage implements IStorage {
   async createMessage(insertMessage: InsertMessage): Promise<Message> {
     const { data, error } = await this.supabase
       .from("messages")
-      .insert([{ role: insertMessage.role, content: insertMessage.content }])
+      .insert([{
+        role: insertMessage.role,
+        content: insertMessage.content,
+        user_id: insertMessage.userId // Map camel to snake for DB
+      }])
       .select()
       .single();
 
@@ -58,15 +69,21 @@ export class SupabaseStorage implements IStorage {
       id: data.id,
       role: data.role,
       content: data.content,
+      userId: data.user_id,
       createdAt: data.created_at ? new Date(data.created_at) : new Date(),
     };
   }
 
-  async clearMessages(): Promise<void> {
-    const { error } = await this.supabase
-      .from("messages")
-      .delete()
-      .neq("id", 0);
+  async clearMessages(userId?: string | null): Promise<void> {
+    let query = this.supabase.from("messages").delete();
+
+    if (userId) {
+      query = query.eq("user_id", userId);
+    } else {
+      query = query.neq("id", 0);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error("Supabase clearMessages error:", error);

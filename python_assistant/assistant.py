@@ -74,50 +74,38 @@ class VoiceAssistant:
         self.microphone = sr.Microphone()
         # Initialize pygame mixer for audio playback
         pygame.mixer.init()
+        self.user_id = os.getenv("USER_ID", "")
         
     def send_to_web_ui(self, role, content):
         """Send message to the Web UI via API."""
         try:
-            # We use a special flag or just post to create message storage
-            # But the 'create' endpoint usually triggers AI generation.
-            # We want to JUST store the message without triggering another AI response from the Server.
-            # However, our server route triggers AI.
-            # Workaround: We can't use the existing POST /api/messages for the USERS input if it triggers AI.
-            # actually, if we use the existing route, the SERVER will generate the response and send it back.
-            # That's actually better! We can just use the server's AI response.
-            # BUT, the user wants the voice assistant script logic (which has specific prompts/voice).
-            # So we should probably just INSERT into the DB. 
-            # Since we don't have direct DB access easily here (it's JSON/in-memory in server), 
-            # we should add a 'no_ai' flag to the API or just ignore it for now and let the UI poll.
-            # 
-            # SIMPLER APPROACH:
-            # Just rely on the Python script for AI.
-            # We need an endpoint to just "Save Message".
-            # The current POST /api/messages triggers AI.
-            # Let's blindly try to use it and see if we can flag it?
-            # Or better: The Python script is the "Client".
-            # 
-            # Actually, to make this visible, we really want to save to the server.
-            # Let's add a simple POST /api/messages/sync endpoint in the server later?
-            # For now, let's just log it.
-            # Wait, the user WANTS it visible.
-            # I will modify this function to send to a NEW endpoint or a modified one.
-            # Let's assume there is an endpoint for syncing or we just use the existing one and accept double-AI for a second?
-            # No, that's bad.
-            # 
-            # Let's stick to modifying the server to allow saving without generating.
-            # But I can't modify server right now easily without restarting it?
-            # I can mod the server.
-            pass
+            print(Fore.BLUE + f"Syncing {role} message to UI..." + Style.RESET_ALL)
+            headers = {
+                "Content-Type": "application/json",
+                "x-voice-secret": "project-a-voice-secret-123",
+                "x-user-id": self.user_id
+            }
+            if self.user_id:
+                print(f"Using User ID: {self.user_id}")
+                
+            payload = {
+                "role": role,
+                "content": content,
+                "skip_ai": True
+            }
+            
+            response = requests.post(API_URL, json=payload, headers=headers)
+            if response.status_code >= 400:
+                print(Fore.RED + f"Sync failed: {response.status_code} - {response.text}" + Style.RESET_ALL)
         except Exception as e:
-            print(f"Failed to sync with UI: {e}")
+            print(Fore.RED + f"Failed to sync with UI: {e}" + Style.RESET_ALL)
         
     def speak(self, text, language="en"):
         """Convert text to speech using ElevenLabs (if avail) or edge-tts, then play with pygame."""
         print(Fore.CYAN + f"Assistant: {text}" + Style.RESET_ALL)
         
         # Sync with UI
-        # requests.post(API_URL, json={"role": "assistant", "content": text})
+        self.send_to_web_ui("assistant", text)
         
         audio_generated = False
 
@@ -186,7 +174,7 @@ class VoiceAssistant:
                 print(Fore.WHITE + f"You said: {text}" + Style.RESET_ALL)
                 
                 # Sync with UI (User)
-                # requests.post(API_URL, json={"role": "user", "content": text})
+                self.send_to_web_ui("user", text)
                 
                 return text
             except sr.WaitTimeoutError:

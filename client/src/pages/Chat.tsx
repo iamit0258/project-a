@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { MessageBubble } from "@/components/MessageBubble";
 import { ChatInput } from "@/components/ChatInput";
 import { TypingIndicator } from "@/components/TypingIndicator";
@@ -6,6 +6,7 @@ import { useMessages, useSendMessage, useClearMessages } from "@/hooks/use-messa
 import { Moon, Sun, Trash2, MessageSquareText, Menu, Mic, LogOut } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -15,6 +16,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
+import { VoiceOverlay } from "@/components/VoiceOverlay";
 
 export default function Chat() {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -23,6 +25,7 @@ export default function Chat() {
   const { mutate: clearMessages, isPending: isClearing } = useClearMessages();
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
+  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -53,11 +56,13 @@ export default function Chat() {
     }
   };
 
+  const handleStartVoice = () => setIsVoiceOpen(true);
+
   // Empty state
   if (!isLoading && (!messages || messages.length === 0)) {
     return (
       <div className="flex flex-col h-screen bg-background relative overflow-hidden">
-        <Header onClear={handleClear} isClearing={isClearing} hasMessages={false} />
+        <Header onClear={handleClear} isClearing={isClearing} hasMessages={false} onStartVoice={handleStartVoice} />
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full text-center">
           <div className="w-20 h-20 bg-card rounded-3xl shadow-xl shadow-primary/5 flex items-center justify-center mb-8 border border-border rotate-3">
@@ -84,13 +89,14 @@ export default function Chat() {
         </div>
 
         <ChatInput onSend={handleSend} disabled={isSending} />
+        <VoiceOverlay isOpen={isVoiceOpen} onClose={() => setIsVoiceOpen(false)} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      <Header onClear={handleClear} isClearing={isClearing} hasMessages={true} />
+      <Header onClear={handleClear} isClearing={isClearing} hasMessages={true} onStartVoice={handleStartVoice} />
 
       {/* Messages Area */}
       <div
@@ -123,29 +129,15 @@ export default function Chat() {
       </div>
 
       <ChatInput onSend={handleSend} disabled={isSending || isLoading} />
+      <VoiceOverlay isOpen={isVoiceOpen} onClose={() => setIsVoiceOpen(false)} />
     </div>
   );
 }
 
-function Header({ onClear, isClearing, hasMessages }: { onClear: () => void, isClearing: boolean, hasMessages: boolean }) {
+function Header({ onClear, isClearing, hasMessages, onStartVoice }: { onClear: () => void, isClearing: boolean, hasMessages: boolean, onStartVoice: () => void }) {
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
 
-  const handleStartVoice = async () => {
-    try {
-      await fetch("/api/voice/start", { method: "POST" });
-      toast({
-        title: "Voice Assistant Started",
-        description: "Check the new terminal window that opened.",
-      });
-    } catch (e) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to start voice assistant",
-      });
-    }
-  };
+  // Removed local state and handler, using props now
 
   return (
     <header className="flex items-center justify-between px-4 md:px-6 py-4 bg-background/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50">
@@ -212,7 +204,7 @@ function Header({ onClear, isClearing, hasMessages }: { onClear: () => void, isC
         <Button
           variant="default"
           size="sm"
-          onClick={handleStartVoice}
+          onClick={onStartVoice}
           className="hidden md:flex bg-primary/90 hover:bg-primary shadow-sm gap-2"
         >
           <Mic className="w-4 h-4" />

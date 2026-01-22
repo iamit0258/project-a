@@ -69,6 +69,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-scroll-to-bottom": "^4.2.0",
     "recharts": "^2.15.2",
+    "regenerator-runtime": "^0.14.1",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
