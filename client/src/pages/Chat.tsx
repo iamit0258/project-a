@@ -9,12 +9,16 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { VoiceOverlay } from "@/components/VoiceOverlay";
 
@@ -65,8 +69,8 @@ export default function Chat() {
         <Header onClear={handleClear} isClearing={isClearing} hasMessages={false} onStartVoice={handleStartVoice} />
 
         <div className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full text-center">
-          <div className="w-20 h-20 bg-card rounded-3xl shadow-xl shadow-primary/5 flex items-center justify-center mb-8 border border-border rotate-3">
-            <MessageSquareText className="w-10 h-10 text-primary" />
+          <div className="w-24 h-24 bg-card/50 backdrop-blur-sm rounded-3xl shadow-2xl shadow-primary/10 flex items-center justify-center mb-8 border border-white/20 rotate-3 transition-transform hover:rotate-6 duration-300">
+            <img src="/favicon.png" alt="Project A" className="w-16 h-16 object-contain drop-shadow-sm" />
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-3 font-display">
             How can I help you today?
@@ -136,69 +140,16 @@ export default function Chat() {
 
 function Header({ onClear, isClearing, hasMessages, onStartVoice }: { onClear: () => void, isClearing: boolean, hasMessages: boolean, onStartVoice: () => void }) {
   const { theme, setTheme } = useTheme();
-
-  // Removed local state and handler, using props now
+  const { signOut } = useAuth();
 
   return (
     <header className="flex items-center justify-between px-4 md:px-6 py-4 bg-background/80 backdrop-blur-md sticky top-0 z-20 border-b border-border/50">
-      <div className="flex items-center gap-3">
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu className="w-5 h-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left">
-            <SheetHeader>
-              <SheetTitle>Menu</SheetTitle>
-            </SheetHeader>
-            <div className="py-4 space-y-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={onClear}
-                disabled={isClearing || !hasMessages}
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Clear Conversation
-              </Button>
-
-              <div className="pt-4 border-t border-border/50">
-                <p className="text-xs font-medium text-muted-foreground mb-2 px-2 uppercase tracking-slate-500">Theme</p>
-                <div className="flex gap-2">
-                  <Button
-                    variant={theme === "light" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setTheme("light")}
-                  >
-                    <Sun className="w-4 h-4 mr-2" />
-                    Light
-                  </Button>
-                  <Button
-                    variant={theme === "dark" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setTheme("dark")}
-                  >
-                    <Moon className="w-4 h-4 mr-2" />
-                    Dark
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-lg shadow-primary/20 bg-white dark:bg-white/10 dark:ring-1 dark:ring-white/20">
-            <img src="/favicon.png" alt="Project A Logo" className="w-full h-full object-cover" />
-          </div>
-          <h1 className="font-bold text-lg tracking-tight">Project A</h1>
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden shadow-lg shadow-primary/20 bg-white dark:bg-white/10 dark:ring-1 dark:ring-white/20">
+          <img src="/favicon.png" alt="Project A Logo" className="w-full h-full object-cover" />
         </div>
+        <h1 className="font-bold text-lg tracking-tight">Project A</h1>
       </div>
-
-
 
       <div className="flex items-center gap-2">
         <Button
@@ -211,28 +162,28 @@ function Header({ onClear, isClearing, hasMessages, onStartVoice }: { onClear: (
           <span className="hidden md:inline">Voice Mode</span>
         </Button>
 
-        <div className="hidden md:flex items-center bg-muted/50 rounded-full p-1 border border-border/50">
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`w-8 h-8 rounded-full ${theme === "light" ? "bg-white shadow-sm text-primary" : "text-muted-foreground"}`}
-            onClick={() => setTheme("light")}
-          >
-            <Sun className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`w-8 h-8 rounded-full ${theme === "dark" ? "bg-slate-800 shadow-sm text-primary" : "text-muted-foreground"}`}
-            onClick={() => setTheme("dark")}
-          >
-            <Moon className="w-4 h-4" />
-          </Button>
-        </div>
+        <div className="hidden md:flex items-center gap-2">
+          <div className="flex items-center bg-muted/50 rounded-full p-1 border border-border/50">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`w-8 h-8 rounded-full ${theme === "light" ? "bg-white shadow-sm text-primary" : "text-muted-foreground"}`}
+              onClick={() => setTheme("light")}
+            >
+              <Sun className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`w-8 h-8 rounded-full ${theme === "dark" ? "bg-slate-800 shadow-sm text-primary" : "text-muted-foreground"}`}
+              onClick={() => setTheme("dark")}
+            >
+              <Moon className="w-4 h-4" />
+            </Button>
+          </div>
 
-        <div className="w-px h-4 bg-border/50 mx-1 hidden md:block" />
+          <div className="w-px h-4 bg-border/50 mx-1" />
 
-        <div className="hidden md:block">
           <Button
             variant="ghost"
             size="sm"
@@ -243,9 +194,59 @@ function Header({ onClear, isClearing, hasMessages, onStartVoice }: { onClear: (
             <Trash2 className="w-4 h-4 mr-2" />
             Clear Chat
           </Button>
+
+          <LogoutButton />
         </div>
 
-        <LogoutButton />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" sideOffset={8} className="w-56 p-2">
+            <DropdownMenuLabel className="text-xs font-normal text-muted-foreground uppercase tracking-wider">Menu</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={onClear}
+              disabled={isClearing || !hasMessages}
+              className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear Conversation
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="cursor-pointer"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="w-4 h-4 mr-2" />
+                  Dark Mode
+                </>
+              ) : (
+                <>
+                  <Sun className="w-4 h-4 mr-2" />
+                  Light Mode
+                </>
+              )}
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={() => signOut()}
+              className="text-muted-foreground focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header >
   );
