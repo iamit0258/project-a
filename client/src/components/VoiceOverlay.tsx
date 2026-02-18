@@ -148,6 +148,11 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
         setAiResponse('');
     };
 
+    const clearResponse = () => {
+        setAiResponse('');
+        setTranscript('');
+    };
+
     const setupRecognition = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -242,13 +247,14 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
     const handleSend = async (text: string) => {
         if (!text.trim()) return;
 
+        clearResponse();
         setState('processing');
         if (recognitionRef.current) recognitionRef.current.stop();
 
         sendMessage(text, {
             onSuccess: (response) => {
                 if (!isMounted.current) return;
-                setAiResponse(response.content);
+                // Defer setAiResponse until audio or fallback is ready
                 speak(response.content);
             },
             onError: (err) => {
@@ -295,6 +301,12 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
             const url = URL.createObjectURL(blob);
             const audio = new Audio(url);
 
+            audio.onplay = () => {
+                if (isMounted.current) {
+                    setAiResponse(text);
+                }
+            };
+
             audio.onended = () => {
                 if (isMounted.current) {
                     setState('listening');
@@ -322,6 +334,12 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
         if (!isMounted.current) return;
 
         const utterance = new SpeechSynthesisUtterance(text);
+
+        utterance.onstart = () => {
+            if (isMounted.current) {
+                setAiResponse(text);
+            }
+        };
 
         // Try to find a good female voice
         const voices = window.speechSynthesis.getVoices();
