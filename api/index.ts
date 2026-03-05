@@ -73,7 +73,10 @@ class SupabaseStorage {
     async createMessage(client: SupabaseClient, insertMessage: InsertMessage): Promise<Message> {
         const { data, error } = await client
             .from("messages")
-            .insert([insertMessage])
+            .insert([{
+                ...insertMessage,
+                is_archived: false // Explicitly set for production consistency
+            }])
             .select()
             .single();
 
@@ -218,7 +221,7 @@ Modify your response length based on the user's request.`,
             message: isGroqError
                 ? "AI Error: Check GROQ_API_KEY"
                 : isDbError
-                    ? "Database Error: Check SUPABASE keys"
+                    ? `Database Error: ${err.message}` // Show actual error message
                     : "Failed to process message",
             detail: err.message,
         });
