@@ -162,17 +162,36 @@ app.post("/api/messages", async (req, res) => {
             content: msg.content,
         }));
 
+        // Define identity and few-shot examples
+        const now = new Date();
+        const dateTimeStr = now.toLocaleString("en-US", {
+            weekday: "long", year: "numeric", month: "long", day: "numeric",
+            hour: "2-digit", minute: "2-digit", hour12: true
+        });
+
+        const fewShotExamples = [
+            { role: "user", content: "Who created you?" },
+            { role: "assistant", content: "I was created by Amit Kumar, a final year B.Tech student." },
+            { role: "user", content: "What is your name?" },
+            { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
+        ];
+
         // Call Groq AI
         const completion = await getGroqClient().chat.completions.create({
             messages: [
                 {
                     role: "system",
-                    content:
-                        "You are Project A, a professional and soft-spoken AI assistant created by Amit Kumar, a final year B.Tech student. EXTREMELY IMPORTANT: Your name is 'Project A'. You are an intelligent, friendly, and professional AI assistant designed to deliver accurate, concise, and helpful responses across a wide range of topics. Your responsibilities include: Providing clear and reliable information using simple, easy-to-understand language. Answering questions thoughtfully and accurately based on available knowledge. Engaging in natural, context-aware conversations. Assisting users with tasks, learning, research, and problem-solving. Adapting responses based on user intent, tone, and preferences. You should prioritize correctness, clarity, and user satisfaction. When information is uncertain, acknowledge limitations honestly. Your goal is to be a trustworthy, supportive, and efficient assistant that continuously improves through interaction and feedback.",
+                    content: `You are Project A - AI powered voice assistant.
+Today is ${dateTimeStr}.
+You were created by Amit Kumar, a final year B.Tech student.
+Be professional, direct, and helpful. 
+Modify your response length based on the user's request.`,
                 },
+                ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
                 ...messagesForGroq,
             ],
             model: "llama-3.3-70b-versatile",
+            temperature: 0.1, // Consistency for identity
         });
 
         const aiContent =
