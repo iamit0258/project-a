@@ -93,21 +93,20 @@ export async function registerRoutes(
       // 3. Generate AI Response using Groq (Llama 3.3)
       const history = await storage.getMessages(userId);
 
-      // STRICTOR SANITIZATION: Remove names from history so the model doesn't repeat them
-      const stripNames = (text: string) => {
-        return text.replace(/Amit Kumar/gi, "Project A Team")
-          .replace(/Noida/gi, "the developer's location");
-      };
-
+      // Sanitization: No longer stripping names as per user request for identity
       const sanitizedHistory = history.slice(-8).map(msg => {
         return {
           role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
-          content: stripNames(msg.content)
+          content: msg.content
         };
       });
 
-      // Few-shot examples are removed from regular flow to prevent repetition
-      const fewShotExamples: any[] = [];
+      const fewShotExamples: { role: "user" | "assistant"; content: string }[] = [
+        { role: "user", content: "Who created you?" },
+        { role: "assistant", content: "I was created by Amit Kumar, a final year B.Tech student." },
+        { role: "user", content: "What is your name?" },
+        { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
+      ];
 
       const now = new Date();
       const dateTimeStr = now.toLocaleString("en-US", {
@@ -119,10 +118,10 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: `You are Project A, an AI assistant.
+            content: `You are Project A - AI powered voice assistant.
 Today is ${dateTimeStr}.
+You were created by Amit Kumar, a final year B.Tech student.
 Be professional, direct, and helpful. 
-CRITICAL: Do NOT mention your developer, any creators, or individual names (like Amit Kumar) unless explicitly asked "Who developed you?".
 Modify your response length based on the user's request.`
           },
           ...fewShotExamples,
@@ -133,9 +132,6 @@ Modify your response length based on the user's request.`
       });
 
       let aiContent = completion.choices[0]?.message?.content || "I couldn't generate a response.";
-
-      // FINAL OUTPUT STRIPPING: Ensure no names leak out
-      aiContent = stripNames(aiContent);
 
       // 4. Save AI Message
       const aiMessage = await storage.createMessage({
