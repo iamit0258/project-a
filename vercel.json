@@ -3,6 +3,10 @@
         {
             "source": "/api/(.*)",
             "destination": "/api"
+        },
+        {
+            "source": "/((?!api/).*)",
+            "destination": "/index.html"
         }
     ],
     "outputDirectory": "dist/public",
