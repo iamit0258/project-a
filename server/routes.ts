@@ -6,6 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import Groq from "groq-sdk";
 import { spawn } from "child_process";
+import { rateLimit } from "express-rate-limit";
 
 // Initialize Groq client
 // Initialize Groq client lazily
@@ -53,10 +54,21 @@ async function getUserIdFromToken(req: any): Promise<string | null> {
   return user.id;
 }
 
+// Rate limiter
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 7, // 7 requests per minute
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many requests, please try again later." }
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Apply rate limit specifically to API routes
+  app.use("/api", limiter);
 
   app.get(api.messages.list.path, async (req, res) => {
     try {

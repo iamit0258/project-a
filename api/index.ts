@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import Groq from "groq-sdk";
 import { z } from "zod";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { rateLimit } from "express-rate-limit";
 
 // ===== SCHEMA =====
 const messageSchema = z.object({
@@ -10,6 +11,14 @@ const messageSchema = z.object({
     content: z.string(),
     user_id: z.string().optional(),
     created_at: z.coerce.date().optional(),
+});
+
+const limiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 7, // Limit each IP to 7 requests per `window` (here, per minute)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: { message: "Too many requests, please try again later." }
 });
 
 type Message = z.infer<typeof messageSchema>;
@@ -124,6 +133,7 @@ function getGroqClient() {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use("/api", limiter);
 
 // GET /api/messages
 app.get("/api/messages", async (req, res) => {

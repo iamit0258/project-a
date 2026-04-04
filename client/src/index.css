@@ -42,33 +42,33 @@
 }
 
 .dark {
-  /* Modern Rich Dark Theme (Midnight Blue/Slate) */
-  --background: 222 47% 11%;
+  /* Modern Rich Dark Theme (Pure Black) */
+  --background: 0 0% 0%;
   --foreground: 210 40% 98%;
 
-  --card: 217 33% 17%;
+  --card: 0 0% 4%;
   --card-foreground: 210 40% 98%;
 
-  --popover: 217 33% 17%;
+  --popover: 0 0% 4%;
   --popover-foreground: 210 40% 98%;
 
   --primary: 217 91% 60%;
-  --primary-foreground: 222 47% 11%;
+  --primary-foreground: 0 0% 0%;
 
-  --secondary: 217 19% 27%;
+  --secondary: 0 0% 12%;
   --secondary-foreground: 210 40% 98%;
 
-  --muted: 217 19% 27%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 65%;
 
-  --accent: 217 19% 27%;
+  --accent: 0 0% 12%;
   --accent-foreground: 210 40% 98%;
 
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
 
-  --border: 217 19% 27%;
-  --input: 217 19% 27%;
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
   --ring: 224 76% 48%;
 }
 
