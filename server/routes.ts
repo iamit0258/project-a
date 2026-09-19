@@ -139,7 +139,7 @@ Modify your response length based on the user's request.`
           ...fewShotExamples,
           ...sanitizedHistory
         ],
-        model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
         temperature: 0.1, // Force strict adherence to identity
       });
 

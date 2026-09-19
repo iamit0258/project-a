@@ -203,7 +203,7 @@ Modify your response length based on the user's request.`,
                 ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
                 ...messagesForGroq,
             ],
-            model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
+            model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
             temperature: 0.1, // Consistency for identity
         });
 
