@@ -105,50 +105,61 @@ export async function registerRoutes(
       // 3. Generate AI Response using Groq (Llama 3.3)
       const history = await storage.getMessages(userId);
 
-      // Sanitization: No longer stripping names as per user request for identity
-      const sanitizedHistory = history.slice(-8).map(msg => {
-        return {
-          role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
-          content: msg.content
-        };
-      });
+      // Check for Creator / Developer queries directly
+      const isCreatorQuery = 
+        /who\s+(created|developed|made|built|designed|invented|coded)\s+(u|you)/i.test(input.content) ||
+        /who\s+is\s+your\s+(creator|developer|maker|author|owner|builder)/i.test(input.content) ||
+        /who\s+(are\s+you\s+made|were\s+you\s+made|are\s+you\s+created|were\s+you\s+created)\s+by/i.test(input.content);
 
-      const fewShotExamples: { role: "user" | "assistant"; content: string }[] = [
-        { role: "user", content: "Who created you?" },
-        { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/." },
-        { role: "user", content: "Who made you?" },
-        { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can check out his projects and portfolio at https://amitkk.in/." },
-        { role: "user", content: "What is your name?" },
-        { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
-      ];
+      let aiContent = "";
 
-      const now = new Date();
-      const dateTimeStr = now.toLocaleString("en-US", {
-        timeZone: "Asia/Kolkata",
-        weekday: "long", year: "numeric", month: "long", day: "numeric",
-        hour: "2-digit", minute: "2-digit", hour12: true
-      }) + " (IST)";
+      if (isCreatorQuery) {
+        aiContent = "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/.";
+      } else {
+        const sanitizedHistory = history.slice(-6).map(msg => {
+          return {
+            role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
+            content: msg.content.replace(/final[‑ -]?year B\.?Tech student/gi, "Software Engineer (portfolio: https://amitkk.in/)")
+          };
+        });
 
-      const completion = await getGroqClient().chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: `You are Project A - an AI-powered voice assistant.
+        const fewShotExamples: { role: "user" | "assistant"; content: string }[] = [
+          { role: "user", content: "Who created you?" },
+          { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/." },
+          { role: "user", content: "Who made you?" },
+          { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can check out his projects and portfolio at https://amitkk.in/." },
+          { role: "user", content: "What is your name?" },
+          { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
+        ];
+
+        const now = new Date();
+        const dateTimeStr = now.toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          weekday: "long", year: "numeric", month: "long", day: "numeric",
+          hour: "2-digit", minute: "2-digit", hour12: true
+        }) + " (IST)";
+
+        const completion = await getGroqClient().chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: `You are Project A - an AI-powered voice assistant.
 Today's date and current time is ${dateTimeStr} (Indian Standard Time - IST).
 You were developed by Amit Kumar Kuswaha, a Software Engineer. His portfolio is https://amitkk.in/.
 When asked who created, developed, or made you, proudly state that you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link: https://amitkk.in/.
 Be professional, warm, direct, and helpful.
 When asked about the date or time, always reply using Indian Standard Time (IST).
 Modify your response length based on the user's request.`
-          },
-          ...fewShotExamples,
-          ...sanitizedHistory
-        ],
-        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-        temperature: 0.1, // Force strict adherence to identity
-      });
+            },
+            ...sanitizedHistory,
+            ...fewShotExamples,
+          ],
+          model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+          temperature: 0.1, // Force strict adherence to identity
+        });
 
-      let aiContent = completion.choices[0]?.message?.content || "I couldn't generate a response.";
+        aiContent = completion.choices[0]?.message?.content || "I couldn't generate a response.";
+      }
 
       // 4. Save AI Message
       const aiMessage = await storage.createMessage({

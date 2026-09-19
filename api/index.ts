@@ -191,29 +191,47 @@ app.post("/api/messages", async (req, res) => {
             { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
         ];
 
-        // Call Groq AI
-        const completion = await getGroqClient().chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `You are Project A - an AI-powered voice assistant.
+        // Check for Creator / Developer queries directly
+        const isCreatorQuery = 
+            /who\s+(created|developed|made|built|designed|invented|coded)\s+(u|you)/i.test(input.content) ||
+            /who\s+is\s+your\s+(creator|developer|maker|author|owner|builder)/i.test(input.content) ||
+            /who\s+(are\s+you\s+made|were\s+you\s+made|are\s+you\s+created|were\s+you\s+created)\s+by/i.test(input.content);
+
+        let aiContent = "";
+
+        if (isCreatorQuery) {
+            aiContent = "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/.";
+        } else {
+            // Get last 6 messages and sanitize old B.Tech text
+            const recentHistory = history.slice(-6).map((msg) => ({
+                role: msg.role as "assistant" | "user",
+                content: msg.content.replace(/final[‑ -]?year B\.?Tech student/gi, "Software Engineer (portfolio: https://amitkk.in/)"),
+            }));
+
+            // Call Groq AI
+            const completion = await getGroqClient().chat.completions.create({
+                messages: [
+                    {
+                        role: "system",
+                        content: `You are Project A - an AI-powered voice assistant.
 Today's date and current time is ${dateTimeStr} (Indian Standard Time - IST).
 You were developed by Amit Kumar Kuswaha, a Software Engineer. His portfolio is https://amitkk.in/.
 When asked who created, developed, or made you, proudly state that you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link: https://amitkk.in/.
 Be professional, warm, direct, and helpful.
 When asked about the date or time, always reply using Indian Standard Time (IST).
 Modify your response length based on the user's request.`,
-                },
-                ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
-                ...messagesForGroq,
-            ],
-            model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-            temperature: 0.1, // Consistency for identity
-        });
+                    },
+                    ...recentHistory,
+                    ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
+                ],
+                model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+                temperature: 0.1, // Consistency for identity
+            });
 
-        const aiContent =
-            completion.choices[0]?.message?.content ||
-            "I couldn't generate a response.";
+            aiContent =
+                completion.choices[0]?.message?.content ||
+                "I couldn't generate a response.";
+        }
 
         // Save AI message
         const aiMessage = await storage.createMessage(supabase, {
