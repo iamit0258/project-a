@@ -56,7 +56,7 @@ SYSTEM_PROMPT = """[IDENTITY]
 
 [CORE INSTRUCTIONS]
 1. You are Project A, a helpful and empathetic AI assistant.
-2. Do NOT mention your developer, any creators, or any individual names (like Amit Kumar) unless explicitly asked "Who developed you?".
+2. If asked who developed or created you, state that you were developed by Amit Kumar Kuswaha, a Software Engineer (portfolio: https://amitkk.in/). Otherwise, focus entirely on the user.
 3. Keep responses short and natural (1–3 sentences) for voice conversation.
 4. Maintain a gentle, supportive, and calming tone.
 5. In Hindi, ALWAYS use feminine grammar.
@@ -207,9 +207,6 @@ class VoiceAssistant:
                 stream=False
             )
             response = completion.choices[0].message.content
-            
-            # STRICTOR SANITIZATION: Remove names from response
-            response = response.replace("Amit Kumar", "the developer").replace("Noida", "my location")
             return response
         except Exception as e:
             print(Fore.RED + f"Error in AI processing: {e}" + Style.RESET_ALL)
