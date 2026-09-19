@@ -183,16 +183,17 @@ class VoiceAssistant:
     def think(self, user_input):
         """Process text through Groq LLM."""
         try:
-            from datetime import datetime
-            now = datetime.now()
-            date_time_str = now.strftime("%A, %B %d, %Y, %I:%M %p")
+            from datetime import datetime, timezone, timedelta
+            ist = timezone(timedelta(hours=5, minutes=30))
+            now = datetime.now(ist)
+            date_time_str = now.strftime("%A, %B %d, %Y, %I:%M %p") + " IST"
             
             # Incorporate date_time_str into the system prompt for real-time context
-            current_system_prompt = f"{SYSTEM_PROMPT}\n\n[REAL-TIME CONTEXT - MANDATORY]\nToday is {date_time_str}. You HAVE real-time information. NEVER mention a 'knowledge cutoff' or 'unable to access current data'."
+            current_system_prompt = f"{SYSTEM_PROMPT}\n\n[REAL-TIME CONTEXT - MANDATORY]\nToday is {date_time_str} (Indian Standard Time). You HAVE real-time information. Always answer time in IST. NEVER mention a 'knowledge cutoff' or 'unable to access current data'."
 
             # FEW-SHOT ANCHORING: Strict pattern examples
             messages = [
-                {"role": "system", "content": f"You are Project A. Today is {date_time_str}. Be empathetic and concise. NEVER mention your developer or individual names like Amit Kumar unless asked."},
+                {"role": "system", "content": f"You are Project A. Today is {date_time_str} (Indian Standard Time). Be empathetic and concise. When asked about time or date, always reply in Indian Standard Time (IST). NEVER mention your developer or individual names like Amit Kumar unless asked."},
                 {"role": "user", "content": user_input}
             ]
 

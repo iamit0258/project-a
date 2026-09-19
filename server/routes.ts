@@ -122,18 +122,20 @@ export async function registerRoutes(
 
       const now = new Date();
       const dateTimeStr = now.toLocaleString("en-US", {
+        timeZone: "Asia/Kolkata",
         weekday: "long", year: "numeric", month: "long", day: "numeric",
         hour: "2-digit", minute: "2-digit", hour12: true
-      });
+      }) + " (IST)";
 
       const completion = await getGroqClient().chat.completions.create({
         messages: [
           {
             role: "system",
             content: `You are Project A - AI powered voice assistant.
-Today is ${dateTimeStr}.
+Today's date and current time is ${dateTimeStr} (Indian Standard Time - IST).
 You were created by Amit Kumar, a final year B.Tech student.
 Be professional, direct, and helpful. 
+When asked about the date or time, always reply using Indian Standard Time (IST).
 Modify your response length based on the user's request.`
           },
           ...fewShotExamples,
