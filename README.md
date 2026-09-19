@@ -15,8 +15,20 @@ To move beyond robotic assistants and create a companion that truly understands 
 ## 🛠 Tech Stack
 - **Frontend**: React 18, Vite 7, Tailwind CSS, Framer Motion, Radix UI.
 - **Backend**: Node.js/Express, PostgreSQL (managed via Supabase).
-- **AI/ML**: Groq Llama 3.3 (for reasoning), ElevenLabs (for TTS), Python (for voice processing).
+- **AI/ML**: Groq GPT-OSS-120B (for high-speed reasoning & chat), ElevenLabs (for TTS), Python (for voice processing).
 - **Voice Intelligence**: SpeechRecognition, Pygame (audio handling), Edge-TTS.
+
+---
+
+## 🔖 Version History
+- **v1.1.0** (Current):
+  - Upgraded AI engine to Groq's flagship **`openai/gpt-oss-120b`** model.
+  - Implemented real-time **Indian Standard Time (IST - Asia/Kolkata)** timezone localization.
+  - Updated official creator identity to **Amit Kumar Kuswaha, Software Engineer** with portfolio link ([amitkk.in](https://amitkk.in/)).
+  - Added robust intent handling and history sanitization for creator queries.
+- **v1.0.0**:
+  - Initial release of Project A with bilingual voice assistant, Supabase integration, and React UI.
+
 ---
 ## ⚖️ License
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
