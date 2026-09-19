@@ -182,15 +182,6 @@ app.post("/api/messages", async (req, res) => {
             hour: "2-digit", minute: "2-digit", hour12: true
         }) + " (IST)";
 
-        const fewShotExamples = [
-            { role: "user", content: "Who created you?" },
-            { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/." },
-            { role: "user", content: "Who made you?" },
-            { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can check out his projects and portfolio at https://amitkk.in/." },
-            { role: "user", content: "What is your name?" },
-            { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
-        ];
-
         // Check for Creator / Developer queries directly
         const isCreatorQuery = 
             /who\s+(created|developed|made|built|designed|invented|coded)\s+(u|you)/i.test(input.content) ||
@@ -202,30 +193,30 @@ app.post("/api/messages", async (req, res) => {
         if (isCreatorQuery) {
             aiContent = "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/.";
         } else {
-            // Get last 6 messages and sanitize old B.Tech text
-            const recentHistory = history.slice(-6).map((msg) => ({
+            // Get last 8 messages for context
+            const recentHistory = history.slice(-8).map((msg) => ({
                 role: msg.role as "assistant" | "user",
                 content: msg.content.replace(/final[‑ -]?year B\.?Tech student/gi, "Software Engineer (portfolio: https://amitkk.in/)"),
             }));
 
-            // Call Groq AI
+            // Call Groq AI with clean conversation flow
             const completion = await getGroqClient().chat.completions.create({
                 messages: [
                     {
                         role: "system",
-                        content: `You are Project A - an AI-powered voice assistant.
-Today's date and current time is ${dateTimeStr} (Indian Standard Time - IST).
-You were developed by Amit Kumar Kuswaha, a Software Engineer. His portfolio is https://amitkk.in/.
-When asked who created, developed, or made you, proudly state that you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link: https://amitkk.in/.
-Be professional, warm, direct, and helpful.
-When asked about the date or time, always reply using Indian Standard Time (IST).
-Modify your response length based on the user's request.`,
+                        content: `You are Project A, an emotionally intelligent, warm, and helpful AI companion.
+Current date and time: ${dateTimeStr}.
+You were developed by Amit Kumar Kuswaha, a Software Engineer (portfolio: https://amitkk.in/).
+
+Guidelines:
+- When asked about the date or time, always answer using Indian Standard Time (IST).
+- When asked who created, developed, or made you, warmly state you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link (https://amitkk.in/).
+- Be conversational, empathetic, concise, and helpful.`,
                     },
                     ...recentHistory,
-                    ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
                 ],
                 model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-                temperature: 0.1, // Consistency for identity
+                temperature: 0.6,
             });
 
             aiContent =

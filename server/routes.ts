@@ -116,21 +116,12 @@ export async function registerRoutes(
       if (isCreatorQuery) {
         aiContent = "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/.";
       } else {
-        const sanitizedHistory = history.slice(-6).map(msg => {
+        const sanitizedHistory = history.slice(-8).map(msg => {
           return {
             role: (msg.role === "assistant" ? "assistant" : "user") as "assistant" | "user",
             content: msg.content.replace(/final[‑ -]?year B\.?Tech student/gi, "Software Engineer (portfolio: https://amitkk.in/)")
           };
         });
-
-        const fewShotExamples: { role: "user" | "assistant"; content: string }[] = [
-          { role: "user", content: "Who created you?" },
-          { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can explore his work and portfolio at https://amitkk.in/." },
-          { role: "user", content: "Who made you?" },
-          { role: "assistant", content: "I was developed by Amit Kumar Kuswaha, a Software Engineer. You can check out his projects and portfolio at https://amitkk.in/." },
-          { role: "user", content: "What is your name?" },
-          { role: "assistant", content: "My name is Project A - AI powered voice assistant." }
-        ];
 
         const now = new Date();
         const dateTimeStr = now.toLocaleString("en-US", {
@@ -143,19 +134,19 @@ export async function registerRoutes(
           messages: [
             {
               role: "system",
-              content: `You are Project A - an AI-powered voice assistant.
-Today's date and current time is ${dateTimeStr} (Indian Standard Time - IST).
-You were developed by Amit Kumar Kuswaha, a Software Engineer. His portfolio is https://amitkk.in/.
-When asked who created, developed, or made you, proudly state that you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link: https://amitkk.in/.
-Be professional, warm, direct, and helpful.
-When asked about the date or time, always reply using Indian Standard Time (IST).
-Modify your response length based on the user's request.`
+              content: `You are Project A, an emotionally intelligent, warm, and helpful AI companion.
+Current date and time: ${dateTimeStr}.
+You were developed by Amit Kumar Kuswaha, a Software Engineer (portfolio: https://amitkk.in/).
+
+Guidelines:
+- When asked about the date or time, always answer using Indian Standard Time (IST).
+- When asked who created, developed, or made you, warmly state you were developed by Amit Kumar Kuswaha, a Software Engineer, and share his portfolio link (https://amitkk.in/).
+- Be conversational, empathetic, concise, and helpful.`
             },
             ...sanitizedHistory,
-            ...fewShotExamples,
           ],
           model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-          temperature: 0.1, // Force strict adherence to identity
+          temperature: 0.6,
         });
 
         aiContent = completion.choices[0]?.message?.content || "I couldn't generate a response.";
