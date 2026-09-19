@@ -203,7 +203,7 @@ Modify your response length based on the user's request.`,
                 ...fewShotExamples.map(ex => ({ role: ex.role as "user" | "assistant", content: ex.content })),
                 ...messagesForGroq,
             ],
-            model: "llama-3.3-70b-versatile",
+            model: process.env.GROQ_MODEL || "llama-3.1-8b-instant",
             temperature: 0.1, // Consistency for identity
         });
 
