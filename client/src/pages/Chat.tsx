@@ -30,6 +30,7 @@ export default function Chat() {
   const { theme, setTheme } = useTheme();
   const { toast } = useToast();
   const [isVoiceOpen, setIsVoiceOpen] = useState(false);
+  const [typingMessageId, setTypingMessageId] = useState<number | null>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -38,8 +39,19 @@ export default function Chat() {
     }
   }, [messages, isSending]);
 
+  const handleTypingTick = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
   const handleSend = (content: string) => {
     sendMessage(content, {
+      onSuccess: (aiResponse) => {
+        if (aiResponse && aiResponse.role === "assistant") {
+          setTypingMessageId(aiResponse.id);
+        }
+      },
       onError: (err) => {
         toast({
           variant: "destructive",
@@ -124,6 +136,9 @@ export default function Chat() {
                   key={msg.id}
                   message={msg}
                   isLast={idx === (messages?.length ?? 0) - 1}
+                  isTyping={msg.id === typingMessageId}
+                  onTypingComplete={() => setTypingMessageId(null)}
+                  onTypingTick={handleTypingTick}
                 />
               ))}
               {isSending && <TypingIndicator />}

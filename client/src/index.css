@@ -94,6 +94,12 @@
   color: hsl(var(--primary));
 }
 
+.dark .bg-primary *::selection,
+.dark .bg-primary::selection {
+  background-color: hsl(var(--primary) / 0.45);
+  color: hsl(var(--foreground));
+}
+
 /* Fallback/specific selection styles */
 *::selection {
   background-color: hsl(var(--primary) / 0.45);
@@ -120,11 +126,11 @@
 }
 
 .prose-custom code {
-  @apply font-mono bg-black/10 rounded px-1 py-0.5 text-sm;
+  @apply font-mono bg-black/10 dark:bg-white/10 rounded px-1.5 py-0.5 text-sm;
 }
 
 .prose-custom pre {
-  @apply font-mono bg-black/10 rounded-lg p-3 overflow-x-auto my-2 text-sm;
+  @apply font-mono bg-black/10 dark:bg-zinc-900/80 rounded-lg p-3 overflow-x-auto my-2 text-sm border border-transparent dark:border-border/50;
 }
 
 /* Dot typing animation */
