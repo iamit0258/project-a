@@ -11,17 +11,29 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
   return {};
 }
 
+// Configurable API base for web & Android container
+function getApiUrl(path: string): string {
+  const base = (typeof window !== "undefined" && (window as any).__ORBIT_API_BASE__) || import.meta.env.VITE_API_URL || "";
+  return `${base}${path}`;
+}
+
 // GET /api/messages
 export function useMessages() {
   return useQuery({
     queryKey: [api.messages.list.path],
     queryFn: async () => {
       const authHeaders = await getAuthHeaders();
-      const res = await fetch(api.messages.list.path, {
+      const res = await fetch(getApiUrl(api.messages.list.path), {
         headers: authHeaders,
       });
       if (!res.ok) throw new Error("Failed to fetch messages");
-      return api.messages.list.responses[200].parse(await res.json());
+      const json = await res.json();
+      try {
+        return api.messages.list.responses[200].parse(json);
+      } catch (err) {
+        console.warn("Message parsing warning, falling back to raw list:", err);
+        return Array.isArray(json) ? json : [];
+      }
     },
   });
 }
@@ -44,7 +56,7 @@ export function useSendMessage() {
       const currentMessages = queryClient.getQueryData<Message[]>([api.messages.list.path]) || [];
       queryClient.setQueryData([api.messages.list.path], [...currentMessages, userMessage]);
 
-      const res = await fetch(api.messages.create.path, {
+      const res = await fetch(getApiUrl(api.messages.create.path), {
         method: api.messages.create.method,
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +98,7 @@ export function useClearMessages() {
   return useMutation({
     mutationFn: async () => {
       const authHeaders = await getAuthHeaders();
-      const res = await fetch(api.messages.clear.path, {
+      const res = await fetch(getApiUrl(api.messages.clear.path), {
         method: api.messages.clear.method,
         headers: {
           ...authHeaders,

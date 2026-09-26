@@ -141,7 +141,11 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
                 recognitionRef.current.stop();
             } catch (e) { /* ignore */ }
         }
-        window.speechSynthesis.cancel();
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+            try {
+                window.speechSynthesis.cancel();
+            } catch (e) { /* ignore */ }
+        }
         clearTimeout(silenceTimer.current);
         setState('idle');
         setTranscript('');
@@ -149,11 +153,11 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
     };
 
     const setupRecognition = () => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const SpeechRecognition = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : undefined;
 
         if (!SpeechRecognition) {
             setState('error');
-            setTranscript("Your browser usually does not support voice recognition. Try Chrome.");
+            setTranscript("Voice recognition is not supported in this environment.");
             return;
         }
 
@@ -279,8 +283,12 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
 
         const cleanedText = cleanTextForSpeech(text);
 
-        // Cancel browser synthesis
-        window.speechSynthesis.cancel();
+        // Cancel browser synthesis safely
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+            try {
+                window.speechSynthesis.cancel();
+            } catch (e) { /* ignore */ }
+        }
 
         try {
             // 1. Try ElevenLabs High Quality TTS
@@ -321,38 +329,50 @@ export function VoiceOverlay({ isOpen, onClose }: VoiceOverlayProps) {
 
     const fallbackSpeak = (text: string) => {
         if (!isMounted.current) return;
+        if (typeof window === 'undefined' || !('speechSynthesis' in window) || !window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
+            setState('idle');
+            return;
+        }
 
-        const utterance = new SpeechSynthesisUtterance(text);
+        try {
+            const utterance = new SpeechSynthesisUtterance(text);
 
-        // Try to find a good female voice
-        const voices = window.speechSynthesis.getVoices();
-        const preferredVoice = voices.find(v => v.name.includes("Zira")) // Windows Female
-            || voices.find(v => v.name.includes("Google US English")) // Chrome Female
-            || voices.find(v => v.name.includes("Female")) // Generic
-            || voices.find(v => v.lang.includes("en-US"));
+            // Try to find a good female voice
+            const voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(v => v.name.includes("Zira")) // Windows Female
+                || voices.find(v => v.name.includes("Google US English")) // Chrome Female
+                || voices.find(v => v.name.includes("Female")) // Generic
+                || voices.find(v => v.lang.includes("en-US"));
 
-        if (preferredVoice) utterance.voice = preferredVoice;
+            if (preferredVoice) utterance.voice = preferredVoice;
 
-        utterance.onend = () => {
-            if (isMounted.current) {
-                setState('listening');
-                if (recognitionRef.current) {
-                    try { recognitionRef.current.start(); } catch (e) { }
+            utterance.onend = () => {
+                if (isMounted.current) {
+                    setState('listening');
+                    if (recognitionRef.current) {
+                        try { recognitionRef.current.start(); } catch (e) { }
+                    }
                 }
-            }
-        };
+            };
 
-        utterance.onerror = () => {
-            if (isMounted.current) setState('idle');
-        };
+            utterance.onerror = () => {
+                if (isMounted.current) setState('idle');
+            };
 
-        window.speechSynthesis.speak(utterance);
+            window.speechSynthesis.speak(utterance);
+        } catch (e) {
+            setState('idle');
+        }
     };
 
     const handleMicClick = () => {
         if (state === 'listening' || state === 'speaking') {
             if (recognitionRef.current) recognitionRef.current.stop();
-            window.speechSynthesis.cancel();
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) { /* ignore */ }
+            }
             setState('idle');
         } else {
             if (recognitionRef.current) {

@@ -31,15 +31,17 @@ export function MessageBubble({
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
 
+  const contentStr = message?.content ?? "";
+
   // Typewriter state for assistant messages
   const [displayedLength, setDisplayedLength] = useState(() =>
-    isTyping && !isUser ? 0 : message.content.length
+    isTyping && !isUser ? 0 : contentStr.length
   );
   const [typingDone, setTypingDone] = useState(() => !isTyping || isUser);
 
   useEffect(() => {
     if (!isTyping || isUser) {
-      setDisplayedLength(message.content.length);
+      setDisplayedLength(contentStr.length);
       setTypingDone(true);
       return;
     }
@@ -47,7 +49,7 @@ export function MessageBubble({
     setTypingDone(false);
     setDisplayedLength(0);
 
-    const totalLength = message.content.length;
+    const totalLength = contentStr.length;
     if (totalLength === 0) {
       setTypingDone(true);
       onTypingComplete?.();
@@ -73,13 +75,15 @@ export function MessageBubble({
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [isTyping, isUser, message.content]);
+  }, [isTyping, isUser, contentStr]);
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(message.content);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(contentStr);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
     } catch (err) {
       console.error("Failed to copy text: ", err);
     }
@@ -89,15 +93,15 @@ export function MessageBubble({
     // Clicking bubble while typing immediately completes animation
     if (!typingDone && !isUser) {
       setTypingDone(true);
-      setDisplayedLength(message.content.length);
+      setDisplayedLength(contentStr.length);
       onTypingComplete?.();
     }
   };
 
   const renderedContent =
     isUser || typingDone
-      ? message.content
-      : `${message.content.slice(0, displayedLength)} ▍`;
+      ? contentStr
+      : `${contentStr.slice(0, displayedLength)} ▍`;
 
   return (
     <motion.div

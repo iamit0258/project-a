@@ -9,10 +9,60 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import Chat from "@/pages/Chat";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
-import { useEffect } from "react";
+import { Component, ErrorInfo, ReactNode, useEffect } from "react";
 import UpdatePassword from "@/pages/UpdatePassword";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false
+  };
+
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Orbit/Project A render error:", error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-background text-foreground text-center">
+          <div className="w-16 h-16 mb-4 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center text-2xl font-bold">
+            !
+          </div>
+          <h2 className="text-xl font-bold mb-2">Display Error Recovered</h2>
+          <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+            {this.state.error?.message || "An unexpected error occurred while rendering the chat."}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: undefined });
+              window.location.reload();
+            }}
+            className="px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            Reload Chat
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, loading } = useAuth();
@@ -29,7 +79,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return <Login />;
   }
 
-  return <Component />;
+  return (
+    <ErrorBoundary>
+      <Component />
+    </ErrorBoundary>
+  );
 }
 
 function Router() {
